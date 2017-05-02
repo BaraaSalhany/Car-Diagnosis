@@ -1,0 +1,288 @@
+package rules;
+import java.io.PrintStream;
+import java.util.Scanner;
+import java.util.Date;
+import entity.*;
+import entity.OAV;
+import entity.OAV.Objects;
+import entity.OAV.TheStarterAttr;
+import entity.OAV.HeadLightsAttr;
+import entity.OAV.Group1Attr;
+import entity.OAV.Group2Attr;
+import entity.OAV.TheBushingsAttr;
+import entity.OAV.BatteryAttr;
+import entity.OAV.WiresAttr;
+import entity.OAV.Group3Attr
+import java.util.ArrayList;
+
+global PrintStream output;
+global Scanner input;
+global Double cf1;
+global Double cf2;
+global OAV temp;
+global PrintCarDiagnosis print;
+
+rule "Read cf for: the starter dead or cranks slowly"
+    when
+        $o : OAV(obj == Objects.TheStarter, attr == TheStarterAttr.TryCrank, val == true)
+    then
+        cf1 = -10.0;
+        while((Double.compare(cf1,1.0) > 0) || (Double.compare(cf1,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The starter is dead] :");
+            cf1 = input.nextDouble();
+        }
+        temp = new OAV(Objects.TheStarter,TheStarterAttr.Dead,true,cf1);
+        $o.addNext(temp);
+        insert(temp);
+        cf2 = -10.0;
+        while((Double.compare(cf2,1.0) > 0) || (Double.compare(cf2,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The starter cranks slowly] :");
+            cf2 = input.nextDouble();
+        }
+        temp = new OAV(Objects.TheStarter,TheStarterAttr.CranksSlowly,true,cf2);
+        insert(temp);
+end
+
+rule "The starter dead or cranks slowly"
+    when
+        $o1 : OAV(obj == Objects.TheStarter, attr == TheStarterAttr.Dead, val == true)
+        $o2 : OAV(obj == Objects.TheStarter, attr == TheStarterAttr.CranksSlowly, val == true,(Double.compare(Double.max(cf,$o1.getCf()),0.0) > 0))
+    then
+        temp = new OAV(Objects.HeadLights,HeadLightsAttr.TurnON,true,Double.max($o1.getCf(),$o2.getCf()) * 0.7);
+        $o1.addNext(temp);
+        insert(temp);
+end
+
+rule "Read cf for: the headlights are bright"
+    when
+        $o : OAV(obj == Objects.HeadLights, attr == HeadLightsAttr.TurnON, val == true)
+    then
+        cf1 = -10.0;
+        while((Double.compare(cf1,1.0) > 0) || (Double.compare(cf1,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The headlights are bright] :");
+            cf1 = input.nextDouble();
+        }
+        temp = new OAV(Objects.HeadLights,HeadLightsAttr.Bright,true,cf1);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "The headlights are bright"
+    when
+        $o : OAV(obj == Objects.HeadLights, attr == HeadLightsAttr.Bright, val == true, Double.compare(cf,0.0) > 0)
+    then
+        temp = new OAV(Objects.Group1,Group1Attr.Trouble,true,$o.getCf() * 0.7);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "Read cf for: the starter cranks normally"
+    when
+        $o : OAV(obj == Objects.Group1, attr == Group1Attr.Trouble, val == true)
+    then
+        cf1 = -10.0;
+        while((Double.compare(cf1,1.0) > 0) || (Double.compare(cf1,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The starter cranks normally] :");
+            cf1 = input.nextDouble();
+        }
+        temp = new OAV(Objects.TheStarter,TheStarterAttr.CranksNormally,true,cf1);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "The starter cranks normally"
+    when
+        $o : OAV(obj == Objects.TheStarter, attr == TheStarterAttr.CranksNormally, val == true, Double.compare(cf,0.0) > 0)
+    then
+        temp = new OAV(Objects.Group2,Group2Attr.Trouble,true,$o.getCf() * 0.7);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "Read cf for: the starter does not work normally"
+    when
+        $o : OAV(obj == Objects.Group1, attr == Group1Attr.Trouble, val == true)
+    then
+        cf1 = -10.0;
+        while((Double.compare(cf1,1.0) > 0) || (Double.compare(cf1,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The starter does not work normally] :");
+            cf1 = input.nextDouble();
+        }
+        temp = new OAV(Objects.TheStarter,TheStarterAttr.CranksNormally,false,cf1);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "The starter does not work normally"
+    when
+        $o : OAV(obj == Objects.TheStarter, attr == TheStarterAttr.CranksNormally, val == false, Double.compare(cf,0.0) > 0)
+    then
+        temp = new OAV(Objects.TheBushings,TheBushingsAttr.Check,true,$o.getCf() * 0.7);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "Read cf for: the bushings are good"
+    when
+        $o : OAV(obj == Objects.Group1, attr == Group1Attr.Trouble, val == true)
+    then
+        cf1 = -10.0;
+        while((Double.compare(cf1,1.0) > 0) || (Double.compare(cf1,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The bushings are good] :");
+            cf1 = input.nextDouble();
+        }
+        temp = new OAV(Objects.TheBushings,TheBushingsAttr.Good,true,cf1);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "The bushings are good"
+    when
+        $o : OAV(obj == Objects.TheBushings, attr == TheBushingsAttr.Good, val == true, Double.compare(cf,0.0) > 0)
+    then
+        temp = new OAV(Objects.TheStarter,TheStarterAttr.SendOrReplace,true,$o.getCf() * 0.7);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "Read cf for: the headlights are out or very dim"
+    when
+        $o : OAV(obj == Objects.HeadLights, attr == HeadLightsAttr.TurnON, val == true)
+    then
+        cf1 = -10.0;
+        while((Double.compare(cf1,1.0) > 0) || (Double.compare(cf1,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The headlights are out] :");
+            cf1 = input.nextDouble();
+        }
+        temp = new OAV(Objects.HeadLights,HeadLightsAttr.Out,true,cf1);
+        $o.addNext(temp);
+        insert(temp);
+        cf2 = -10.0;
+        while((Double.compare(cf2,1.0) > 0) || (Double.compare(cf2,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The headlights are very dim] :");
+            cf2 = input.nextDouble();
+        }
+        temp = new OAV(Objects.HeadLights,HeadLightsAttr.VeryDim,true,cf2);
+        insert(temp);
+end
+
+rule "The headlights are out or very dim"
+    when
+        $o1 : OAV(obj == Objects.HeadLights, attr == HeadLightsAttr.Out, val == true)
+        $o2 : OAV(obj == Objects.HeadLights, attr == HeadLightsAttr.VeryDim, val == true,(Double.compare(Double.max(cf,$o1.getCf()),0.0) > 0))
+    then
+        temp = new OAV(Objects.Battery,BatteryAttr.Check,true,Double.max($o1.getCf(),$o2.getCf()) * 0.7);
+        $o1.addNext(temp);
+        insert(temp);
+end
+
+rule "Read cf for: the battery is OK"
+    when
+        $o : OAV(obj == Objects.Battery, attr == BatteryAttr.Check, val == true)
+    then
+        cf1 = -10.0;
+        while((Double.compare(cf1,1.0) > 0) || (Double.compare(cf1,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The battery is OK] :");
+            cf1 = input.nextDouble();
+        }
+        temp = new OAV(Objects.Battery,BatteryAttr.OK,true,cf1);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "The battery is OK"
+    when
+        $o : OAV(obj == Objects.Battery, attr == BatteryAttr.OK, val == true, Double.compare(cf,0.0) > 0)
+    then
+        temp = new OAV(Objects.Wires,WiresAttr.Check,true,$o.getCf() * 0.7);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "Read cf for: the connecting wires are not at fault"
+    when
+        $o : OAV(obj == Objects.Wires, attr == WiresAttr.Check, val == true)
+    then
+        cf1 = -10.0;
+        while((Double.compare(cf1,1.0) > 0) || (Double.compare(cf1,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The connecting wires are not at fault] :");
+            cf1 = input.nextDouble();
+        }
+        temp = new OAV(Objects.Wires,WiresAttr.NotFault,true,cf1);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "The battery and connecting wires are not at fault"
+    when
+        $o1 : OAV(obj == Objects.Wires, attr == WiresAttr.NotFault, val == true)
+        $o2 : OAV(obj == Objects.Battery, attr == BatteryAttr.OK, val == true,(Double.compare(Double.min(cf,$o1.getCf()),0.0) > 0))
+    then
+        temp = new OAV(Objects.Group3,Group3Attr.TurnONAndCrank,true,Double.min($o1.getCf(),$o2.getCf()) * 0.7);
+        $o1.addNext(temp);
+        insert(temp);
+end
+
+rule "Read cf for: the lights dim drastically"
+    when
+        $o : OAV(obj == Objects.Group3, attr == Group3Attr.TurnONAndCrank, val == true)
+    then
+        cf1 = -10.0;
+        while((Double.compare(cf1,1.0) > 0) || (Double.compare(cf1,-1.0) < 0))
+        {
+            System.out.println("Insert cf (between -1 and 1) for the fact [The lights dim drastically] :");
+            cf1 = input.nextDouble();
+        }
+        temp = new OAV(Objects.HeadLights,HeadLightsAttr.DimDrastically,true,cf1);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "The lights dim drastically"
+    when
+        $o : OAV(obj == Objects.HeadLights, attr == HeadLightsAttr.DimDrastically, val == true, Double.compare(cf,0.0) > 0)
+    then
+        temp = new OAV(Objects.TheStarter,TheStarterAttr.ShortedToGround,true,$o.getCf() * 0.7);
+        $o.addNext(temp);
+        insert(temp);
+end
+
+rule "Start Print"
+salience -10
+    when
+        $o : OAV(obj == Objects.TheStarter, attr == TheStarterAttr.TryCrank, val == true)
+    then
+        print = new PrintCarDiagnosis($o,"",true);
+        insert(print);
+end
+
+rule "Recursive Print"
+    when
+        $o : PrintCarDiagnosis(oav.getNext() != null)
+    then
+        for (OAV t : $o.getOav().getNext()) {
+            if ($o.isFlag())
+                insert(new PrintCarDiagnosis(t,$o.getStr()  + "Because " +  t.getAttr() + " with cf = " +  t.getCf(),!$o.isFlag()));
+            if (!$o.isFlag())
+                 insert(new PrintCarDiagnosis(t,$o.getStr()  + ",\t So " + t.getAttr() + " with cf = " +  t.getCf() + "\n",!$o.isFlag()));
+        }
+end
+
+rule "Printt Diagnosis"
+salience -20
+    when
+        $o : PrintCarDiagnosis(oav.getNext() == null)
+    then
+        System.out.println("=====================================");
+        System.out.println($o.getStr());
+end
